@@ -33,6 +33,8 @@ public class SteamVR_TrackedObject : MonoBehaviour
 	public EIndex index;
 	public Transform origin; // if not set, relative to parent
     public bool isValid = false;
+	private Vector3 offset;
+	private Quaternion angles;
 
 	private void OnNewPoses(params object[] args)
 	{
@@ -67,8 +69,8 @@ public class SteamVR_TrackedObject : MonoBehaviour
 		}
 		else
 		{
-			transform.localPosition = pose.pos;
-			transform.localRotation = pose.rot;
+			transform.localPosition = pose.pos + pose.rot*offset;
+			transform.localRotation = pose.rot*angles;
 		}
 	}
 
@@ -86,6 +88,12 @@ public class SteamVR_TrackedObject : MonoBehaviour
 	{
 		if (System.Enum.IsDefined(typeof(EIndex), index))
 			this.index = (EIndex)index;
+	}
+
+	// Use this for initialization
+	void Start () {
+		offset = transform.position;
+		angles = transform.rotation;
 	}
 }
 
