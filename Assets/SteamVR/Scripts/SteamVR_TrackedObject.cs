@@ -33,8 +33,15 @@ public class SteamVR_TrackedObject : MonoBehaviour
 	public EIndex index;
 	public Transform origin; // if not set, relative to parent
     public bool isValid = false;
+	public GameObject bulletPrefab;
+
+	float attackSpeed = 0.5f;
+	float cooldown;
+
 	private Vector3 offset;
 	private Quaternion angles;
+
+
 
 	private void OnNewPoses(params object[] args)
 	{
@@ -71,17 +78,39 @@ public class SteamVR_TrackedObject : MonoBehaviour
 		{
 			transform.localPosition = pose.pos + pose.rot*offset;
 			transform.localRotation = pose.rot*angles;
+
 		}
+
+		var vr = SteamVR.instance;
+		var isController = (vr.hmd.GetTrackedDeviceClass((uint)i) == ETrackedDeviceClass.Controller);
+		var state = new VRControllerState_t();
+		var success = vr.hmd.GetControllerState((uint)i, ref state);
+		var triggerPressed = (state.ulButtonPressed & SteamVR_Controller.ButtonMask.Trigger) != 0;
+
+		if (Time.time >= cooldown) {
+			if (triggerPressed) {
+				Debug.Log ("trigger pressed");
+				GameObject bPrefab = Instantiate(bulletPrefab, pose.pos, pose.rot) as GameObject;
+				Rigidbody rb = bPrefab.AddComponent<Rigidbody>(); // Add the rigidbody.
+				rb.mass = 1; // Set the GO's mass to 5 via the Rigidbody.
+				rb.AddForce (pose.rot*Vector3.down * 3000f);
+				cooldown = Time.time + attackSpeed;
+			}
+		}
+
 	}
 
 	void OnEnable()
 	{
 		SteamVR_Utils.Event.Listen("new_poses", OnNewPoses);
+		SteamVR_Utils.Event.Listen("device_connected", OnDeviceConnected);
 	}
 
 	void OnDisable()
 	{
 		SteamVR_Utils.Event.Remove("new_poses", OnNewPoses);
+		SteamVR_Utils.Event.Remove("device_connected", OnDeviceConnected);
+
 	}
 
 	public void SetDeviceIndex(int index)
@@ -94,6 +123,20 @@ public class SteamVR_TrackedObject : MonoBehaviour
 	void Start () {
 		offset = transform.position;
 		angles = transform.rotation;
+	}
+	private void OnDeviceConnected(params object[] args)
+	{
+		var i = (int)args[0];
+		var connected = (bool)args[1];
+	}
+
+	// Fire a bullet
+	void Fire() {
+		GameObject bPrefab = Instantiate(bulletPrefab, transform.position, Quaternion.identity) as GameObject;
+		Rigidbody rb = bPrefab.AddComponent<Rigidbody>(); // Add the rigidbody.
+		rb.mass = 1; // Set the GO's mass to 5 via the Rigidbody.
+		rb.AddForce (Vector3.down * 100f);
+		cooldown = Time.time + attackSpeed;
 	}
 }
 
